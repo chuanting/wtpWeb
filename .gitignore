@@ -6,8 +6,6 @@ __pycache__/
 # 生成的地图数据（部署时由 preprocess.py 生成）
 static/data/
 
-# 本地 ECharts（可重新下载）
-static/lib/
 
 # 系统文件
 .DS_Store
