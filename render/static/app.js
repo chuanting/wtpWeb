@@ -33,9 +33,9 @@ let hoveredFeatId = null;   // 当前 hover 的 feature id
 let selectedFeatId = null;  // 当前选中的 feature id
 let seriesChart   = null;
 let predChart     = null;
-let _animTimer      = null;   // 时序动画定时器
-let _animData       = null;   // 时序原始数据 { times, rawSeries[] }
-let _legendSelected = {};     // 用户图例显隐状态（由事件维护）
+let _animTimer  = null;   // 时序动画定时器
+let _animData   = null;   // 时序原始数据 { times, rawSeries[] }
+let _seriesVis  = {};     // 每条系列的显隐状态 { name: bool }（自定义 legend 按钮维护）
 
 /* ── 主题配色表 ──────────────────────────────────── */
 const THEME_COLORS = {
@@ -724,9 +724,7 @@ async function loadStreetSeries(id, name) {
   if (!seriesChart) {
     seriesChart = echarts.init($('seriesChart'), null, { renderer: 'canvas' });
     window.addEventListener('resize', () => seriesChart?.resize());
-    seriesChart.on('legendselectchanged', e => { _legendSelected = e.selected; });
   }
-  _legendSelected = {};  // 切换街道时重置图例状态
 
   seriesChart.showLoading({
     text: '加载中...', color: '#00d4ff',
@@ -754,12 +752,16 @@ async function loadStreetSeries(id, name) {
     });
 
     _animData = { times, rawSeries };
+    // 初始化所有系列为可见
+    _seriesVis = Object.fromEntries(rawSeries.map(s => [s.name, true]));
+
     seriesChart.hideLoading();
 
-    // 一次性静态配置
+    // 一次性静态配置（无内置 legend，由 HTML 按钮控制）
     seriesChart.setOption({
       backgroundColor: 'transparent',
       animation: false,
+      legend: { show: false },
       tooltip: {
         trigger: 'axis', className: 'echarts-tooltip',
         axisPointer: { type: 'cross', lineStyle: { color: '#1e3a5f' } },
@@ -774,12 +776,7 @@ async function loadStreetSeries(id, name) {
           return html;
         },
       },
-      legend: {
-        data: rawSeries.map(s => s.name), top: 0, right: 4,
-        textStyle: { color: '#94a3b8', fontSize: 10 },
-        icon: 'circle', itemWidth: 8, itemHeight: 8,
-      },
-      grid: { top: 28, bottom: 28, left: 44, right: 12 },
+      grid: { top: 8, bottom: 28, left: 44, right: 12 },
       xAxis: {
         type: 'category', data: [],
         axisLabel: { color: '#4a6a8a', fontSize: 9,
@@ -795,7 +792,7 @@ async function loadStreetSeries(id, name) {
         axisLine: { show: false },
         splitLine: { lineStyle: { color: '#1e3a5f', type: 'dashed' } },
       },
-      series: rawSeries.map((s, i) => ({
+      series: rawSeries.map(s => ({
         name: s.name, type: 'line', data: [], smooth: true,
         lineStyle: { color: s.color, width: 1.5 },
         itemStyle: { color: s.color },
@@ -810,22 +807,45 @@ async function loadStreetSeries(id, name) {
           },
           opacity: 0.4,
         },
-        markLine: i === 0 ? {
-          silent: true,
-          symbol: ['none', 'none'],
-          lineStyle: { color: 'rgba(96,165,250,0.5)', type: 'dashed', width: 1 },
-          label: { show: true, formatter: '今日', color: '#60a5fa',
-                   fontSize: 8, position: 'insideStartTop' },
-          data: [],
-        } : undefined,
       })),
     }, { notMerge: true });
+
+    // 构建 HTML 图例按钮
+    buildSeriesLegend(rawSeries);
 
     runSeriesAnimation();
   } catch (e) {
     seriesChart.hideLoading();
     console.error('时序加载失败:', e);
   }
+}
+
+/* ══════════════════════════════════════════════
+   HTML 自定义图例按钮
+══════════════════════════════════════════════ */
+function buildSeriesLegend(rawSeries) {
+  const container = $('seriesLegend');
+  container.innerHTML = '';
+  rawSeries.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'legend-btn active';
+    btn.dataset.name = s.name;
+    btn.innerHTML = `<span class="legend-dot" style="background:${s.color}"></span>${s.name}`;
+    btn.addEventListener('click', () => {
+      const visible = !_seriesVis[s.name];
+      _seriesVis[s.name] = visible;
+      btn.classList.toggle('active', visible);
+      // 通过 lineStyle/areaStyle opacity 控制显隐，不触碰 legend 组件
+      seriesChart.setOption({
+        series: [{ name: s.name,
+          lineStyle: { opacity: visible ? 1 : 0 },
+          areaStyle: { opacity: visible ? 0.4 : 0 },
+          itemStyle: { opacity: visible ? 1 : 0 },
+        }],
+      });
+    });
+    container.appendChild(btn);
+  });
 }
 
 /* ══════════════════════════════════════════════
@@ -844,17 +864,10 @@ function runSeriesAnimation() {
   let winStart = 0;
 
   function setFrame() {
-    const update = {
+    seriesChart.setOption({
       xAxis: { data: times.slice(winStart, winStart + WIN_PTS) },
-      series: rawSeries.map(s => ({
-        data: s.values.slice(winStart, winStart + WIN_PTS),
-      })),
-    };
-    // 用事件维护的状态恢复用户的图例显隐选择
-    if (Object.keys(_legendSelected).length) {
-      update.legend = { selected: _legendSelected };
-    }
-    seriesChart.setOption(update);
+      series: rawSeries.map(s => ({ name: s.name, data: s.values.slice(winStart, winStart + WIN_PTS) })),
+    });
   }
 
   setFrame();
