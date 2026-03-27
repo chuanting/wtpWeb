@@ -845,14 +845,21 @@ function runSeriesAnimation() {
   function setFrame(nLive) {
     const t = times.slice(winStart, winStart + HIST_PTS + nLive);
     const boundaryTime = nLive > 0 ? times[winStart + HIST_PTS] : null;
-    seriesChart.setOption({
+
+    // 保留用户对 legend 的显示/隐藏选择，防止被每帧 setOption 覆盖
+    const opts = seriesChart.getOption();
+    const legendSelected = opts?.legend?.[0]?.selected;
+
+    const update = {
       xAxis: { data: t },
       series: rawSeries.map((s, i) => {
         const obj = { data: s.values.slice(winStart, winStart + HIST_PTS + nLive) };
         if (i === 0) obj.markLine = { data: boundaryTime ? [{ xAxis: boundaryTime }] : [] };
         return obj;
       }),
-    });
+    };
+    if (legendSelected) update.legend = { selected: legendSelected };
+    seriesChart.setOption(update);
   }
 
   function startWindow() {
