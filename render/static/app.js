@@ -33,8 +33,9 @@ let hoveredFeatId = null;   // 当前 hover 的 feature id
 let selectedFeatId = null;  // 当前选中的 feature id
 let seriesChart   = null;
 let predChart     = null;
-let _animTimer    = null;   // 时序动画定时器
-let _animData     = null;   // 时序原始数据 { times, rawSeries[] }
+let _animTimer      = null;   // 时序动画定时器
+let _animData       = null;   // 时序原始数据 { times, rawSeries[] }
+let _legendSelected = {};     // 用户图例显隐状态（由事件维护）
 
 /* ── 主题配色表 ──────────────────────────────────── */
 const THEME_COLORS = {
@@ -723,7 +724,9 @@ async function loadStreetSeries(id, name) {
   if (!seriesChart) {
     seriesChart = echarts.init($('seriesChart'), null, { renderer: 'canvas' });
     window.addEventListener('resize', () => seriesChart?.resize());
+    seriesChart.on('legendselectchanged', e => { _legendSelected = e.selected; });
   }
+  _legendSelected = {};  // 切换街道时重置图例状态
 
   seriesChart.showLoading({
     text: '加载中...', color: '#00d4ff',
@@ -841,17 +844,16 @@ function runSeriesAnimation() {
   let winStart = 0;
 
   function setFrame() {
-    // 保留用户对 legend 的显示/隐藏选择，防止被 setOption 覆盖
-    const opts = seriesChart.getOption();
-    const legendSelected = opts?.legend?.[0]?.selected;
-
     const update = {
       xAxis: { data: times.slice(winStart, winStart + WIN_PTS) },
       series: rawSeries.map(s => ({
         data: s.values.slice(winStart, winStart + WIN_PTS),
       })),
     };
-    if (legendSelected) update.legend = { selected: legendSelected };
+    // 用事件维护的状态恢复用户的图例显隐选择
+    if (Object.keys(_legendSelected).length) {
+      update.legend = { selected: _legendSelected };
+    }
     seriesChart.setOption(update);
   }
 
