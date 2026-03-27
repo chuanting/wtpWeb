@@ -826,61 +826,42 @@ async function loadStreetSeries(id, name) {
 }
 
 /* ══════════════════════════════════════════════
-   七天滚动动画（6天静态 + 第7天逐点播放）
+   七天滚动动画（整体窗口每步右移一格）
 ══════════════════════════════════════════════ */
 function runSeriesAnimation() {
   if (!_animData || !seriesChart) return;
   stopSeriesAnimation();
 
   const { times, rawSeries } = _animData;
-  const DAY_PTS  = 96;           // 每天 96 个 15 分钟时间步
-  const HIST_PTS = 6 * DAY_PTS;  // 前 6 天：576 个点（静态）
-  const WIN_PTS  = 7 * DAY_PTS;  // 7 天窗口：672 个点
-  const ANIM_MS  = 80;           // 每点间隔 ms（≈7.7s/天）
+  const WIN_PTS = 7 * 96;  // 7 天窗口：672 个点
+  const ANIM_MS = 150;     // 每步间隔 ms
 
   if (times.length < WIN_PTS) return;
 
   let winStart = 0;
 
-  function setFrame(nLive) {
-    const t = times.slice(winStart, winStart + HIST_PTS + nLive);
-    const boundaryTime = nLive > 0 ? times[winStart + HIST_PTS] : null;
-
-    // 保留用户对 legend 的显示/隐藏选择，防止被每帧 setOption 覆盖
+  function setFrame() {
+    // 保留用户对 legend 的显示/隐藏选择，防止被 setOption 覆盖
     const opts = seriesChart.getOption();
     const legendSelected = opts?.legend?.[0]?.selected;
 
     const update = {
-      xAxis: { data: t },
-      series: rawSeries.map((s, i) => {
-        const obj = { data: s.values.slice(winStart, winStart + HIST_PTS + nLive) };
-        if (i === 0) obj.markLine = { data: boundaryTime ? [{ xAxis: boundaryTime }] : [] };
-        return obj;
-      }),
+      xAxis: { data: times.slice(winStart, winStart + WIN_PTS) },
+      series: rawSeries.map(s => ({
+        data: s.values.slice(winStart, winStart + WIN_PTS),
+      })),
     };
     if (legendSelected) update.legend = { selected: legendSelected };
     seriesChart.setOption(update);
   }
 
-  function startWindow() {
-    setFrame(0);
-    let live = 0;
-    const maxLive = Math.min(DAY_PTS, times.length - winStart - HIST_PTS);
+  setFrame();
 
-    _animTimer = setInterval(() => {
-      live++;
-      setFrame(live);
-      if (live >= maxLive) {
-        clearInterval(_animTimer);
-        _animTimer = null;
-        const next = winStart + DAY_PTS;
-        winStart = (next + WIN_PTS <= times.length) ? next : 0;
-        setTimeout(startWindow, 1200); // 停顿 1.2s 后推进下一天
-      }
-    }, ANIM_MS);
-  }
-
-  startWindow();
+  _animTimer = setInterval(() => {
+    winStart++;
+    if (winStart + WIN_PTS > times.length) winStart = 0;
+    setFrame();
+  }, ANIM_MS);
 }
 
 /* ══════════════════════════════════════════════
