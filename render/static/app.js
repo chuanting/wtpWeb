@@ -864,8 +864,16 @@ function runSeriesAnimation() {
   let winStart = 0;
 
   function setFrame() {
+    const slices = rawSeries
+      .filter(s => _seriesVis[s.name])
+      .map(s => s.values.slice(winStart, winStart + WIN_PTS));
+    const allVals = slices.flat();
+    const dataMax = allVals.length ? Math.max(...allVals) : null;
+    const yMax = dataMax ? Math.ceil(dataMax * 1.1) : undefined;
+
     seriesChart.setOption({
       xAxis: { data: times.slice(winStart, winStart + WIN_PTS) },
+      yAxis: { max: yMax, min: 0 },
       series: rawSeries.map(s => ({ name: s.name, data: s.values.slice(winStart, winStart + WIN_PTS) })),
     });
   }
