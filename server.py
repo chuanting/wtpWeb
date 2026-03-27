@@ -123,7 +123,7 @@ def _make_features(series: pd.Series) -> pd.DataFrame:
 
 def _train_worker(street_id: str, net: str, q: queue.Queue):
     try:
-        import lightgbm as lgb
+        from sklearn.ensemble import HistGradientBoostingRegressor
         from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
     except ImportError as e:
         _send(q, 'error', msg=f'缺少依赖: {e}')
@@ -184,65 +184,48 @@ def _train_worker(street_id: str, net: str, q: queue.Queue):
               level='info')
         time.sleep(0.05)
 
-        # 构建 LightGBM Dataset
-        train_set = lgb.Dataset(X_train, label=y_train, feature_name=feature_cols)
-        valid_set = lgb.Dataset(X_test,  label=y_test,  reference=train_set)
-
-        params = {
-            'objective':        'regression',
-            'metric':           ['rmse', 'mae'],
-            'num_leaves':       63,
-            'learning_rate':    0.05,
-            'feature_fraction': 0.8,
-            'bagging_fraction': 0.8,
-            'bagging_freq':     5,
-            'min_child_samples': 20,
-            'verbose':          -1,
-            'n_jobs':           -1,
-        }
         N_ITERS = 300
+        REPORT_EVERY = 10
 
-        _send(q, 'log', msg=f'LightGBM 参数初始化完成 | 迭代次数: {N_ITERS}', level='info')
+        _send(q, 'log', msg=f'HistGradientBoosting 参数初始化完成 | 迭代次数: {N_ITERS}', level='info')
         _send(q, 'log', msg='▶ 开始迭代训练...', level='info')
         time.sleep(0.1)
 
-        train_start = time.time()
-        iter_records = []
-
-        class ProgressCallback:
-            def __init__(self):
-                self.order = 0
-
-            def __call__(self, env):
-                it = env.iteration
-                if it % 10 == 0 or it == N_ITERS - 1:
-                    elapsed = time.time() - train_start
-                    eta = elapsed / (it + 1) * (N_ITERS - it - 1) if it > 0 else 0
-                    results_list = env.evaluation_result_list
-                    rmse = next((r[2] for r in results_list if 'rmse' in r[1].lower()), 0)
-                    mae  = next((r[2] for r in results_list if 'mae'  in r[1].lower()), 0)
-                    pct  = (it + 1) / N_ITERS * 100
-                    iter_records.append({'iter': it, 'rmse': rmse, 'mae': mae})
-                    _send(q, 'iter',
-                          direction=direction,
-                          iter=it + 1,
-                          total=N_ITERS,
-                          pct=round(pct, 1),
-                          rmse=round(rmse, 4),
-                          mae=round(mae, 4),
-                          elapsed=round(elapsed, 1),
-                          eta=round(eta, 1))
-                    time.sleep(0.02)  # 控制刷新速率，让前端可见
-
-        model = lgb.train(
-            params,
-            train_set,
-            num_boost_round=N_ITERS,
-            valid_sets=[valid_set],
-            callbacks=[ProgressCallback()],
+        model = HistGradientBoostingRegressor(
+            max_iter=REPORT_EVERY,
+            warm_start=True,
+            learning_rate=0.05,
+            max_leaf_nodes=63,
+            min_samples_leaf=20,
+            random_state=42,
         )
 
-        # 评估
+        train_start = time.time()
+
+        for batch in range(N_ITERS // REPORT_EVERY):
+            current_iter = (batch + 1) * REPORT_EVERY
+            model.max_iter = current_iter
+            model.fit(X_train, y_train)
+
+            elapsed = time.time() - train_start
+            eta = elapsed / current_iter * (N_ITERS - current_iter) if current_iter > 0 else 0
+            y_pred_partial = model.predict(X_test)
+            rmse_partial = math.sqrt(mean_squared_error(y_test, y_pred_partial))
+            mae_partial  = mean_absolute_error(y_test, y_pred_partial)
+            pct = current_iter / N_ITERS * 100
+
+            _send(q, 'iter',
+                  direction=direction,
+                  iter=current_iter,
+                  total=N_ITERS,
+                  pct=round(pct, 1),
+                  rmse=round(rmse_partial, 4),
+                  mae=round(mae_partial, 4),
+                  elapsed=round(elapsed, 1),
+                  eta=round(eta, 1))
+            time.sleep(0.02)
+
+        # 最终评估
         y_pred = model.predict(X_test)
         rmse  = math.sqrt(mean_squared_error(y_test, y_pred))
         mae   = mean_absolute_error(y_test, y_pred)
