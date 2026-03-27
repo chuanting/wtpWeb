@@ -101,6 +101,7 @@ async function init() {
 
     bindControls();
     initResizer();
+    initMobileTabs();
     showLoading(false);
   } catch (e) {
     console.error('初始化失败:', e);
@@ -676,7 +677,7 @@ async function loadStreetSeries(id, name) {
         textStyle: { color: '#94a3b8', fontSize: 10 },
         icon: 'circle', itemWidth: 8, itemHeight: 8,
       },
-      grid: { top: 28, bottom: 28, left: 44, right: 12 },
+      grid: { top: 28, bottom: 56, left: 44, right: 12 },
       xAxis: {
         type: 'category', data: times,
         axisLabel: { color: '#4a6a8a', fontSize: 9,
@@ -695,7 +696,7 @@ async function loadStreetSeries(id, name) {
       },
       dataZoom: [
         { type: 'inside', start: 0, end: 100 },
-        { type: 'slider', height: 14, bottom: 0, handleSize: 8,
+        { type: 'slider', height: 16, bottom: 6, handleSize: 10,
           borderColor: '#1e3a5f', fillerColor: 'rgba(8,145,178,0.15)',
           textStyle: { color: '#4a6a8a', fontSize: 9 } },
       ],
@@ -997,6 +998,26 @@ function initResizer() {
       mlMap?.resize();
       seriesChart?.resize();
       predChart?.resize();
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════
+   移动端 Tab 切换
+══════════════════════════════════════════════ */
+function initMobileTabs() {
+  const tabs = document.querySelectorAll('.mobile-tab');
+  if (!tabs.length) return;
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.target;
+      ['seriesPanel', 'trainPanel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('mobile-hidden', id !== target);
+      });
+      setTimeout(() => { seriesChart?.resize(); predChart?.resize(); }, 80);
     });
   });
 }

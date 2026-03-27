@@ -792,3 +792,144 @@ html, body {
   50%  { width: 70%; margin-left: 0; }
   100% { width: 0%;  margin-left: 100%; }
 }
+
+/* ══════════════════════════════════════════════
+   移动端适配（≤ 767px）
+══════════════════════════════════════════════ */
+.mobile-tabs { display: none; }
+.mobile-hidden { display: none !important; }
+
+@media (max-width: 767px) {
+  html, body {
+    height: auto;
+    overflow: auto;
+  }
+
+  /* ── 导航栏折叠 ── */
+  .navbar {
+    height: auto;
+    min-height: 44px;
+    padding: 6px 12px;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .navbar-left { flex: 1 1 auto; }
+  .navbar-title { font-size: 12px; }
+  .logo-icon { font-size: 16px; }
+  .navbar-controls {
+    width: 100%;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .time-badge {
+    min-width: 0;
+    flex: 1;
+    font-size: 11px;
+    padding: 3px 8px;
+    text-align: left;
+  }
+
+  /* ── 主体改为纵向滚动 ── */
+  .main-layout {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+    padding: 6px;
+    gap: 6px;
+    padding-bottom: 40px;
+  }
+
+  /* ── 隐藏拖拽分割条 ── */
+  .resizer { display: none; }
+
+  /* ── 地图面板固定高度 ── */
+  .map-panel {
+    flex: none !important;
+    height: 52vw;
+    min-height: 260px;
+    max-height: 420px;
+    min-width: 0;
+  }
+
+  /* 地图控件更大，便于触控 */
+  .maplibregl-ctrl-group button {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  /* 时间轴紧凑 */
+  .timeline-bar { padding: 5px 8px; gap: 5px; }
+  .speed-group { gap: 2px; }
+  .speed-btn { padding: 4px 8px; font-size: 10px; }
+
+  /* ── 移动端 Tab ── */
+  .mobile-tabs {
+    display: flex;
+    background: var(--bg-panel2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .mobile-tab {
+    flex: 1;
+    padding: 10px 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .mobile-tab.active {
+    color: var(--blue-bright);
+    background: var(--bg-panel);
+    border-bottom-color: var(--blue);
+  }
+
+  /* ── 侧边栏纵向 ── */
+  .sidebar {
+    flex: none !important;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    min-width: 0;
+  }
+
+  /* 时序图面板固定高度 */
+  .series-panel {
+    flex: none !important;
+    height: 300px;
+  }
+
+  /* 训练面板自适应高度 */
+  .train-panel {
+    flex: none !important;
+    min-height: 380px;
+    height: auto;
+  }
+
+  /* 终端最小高度 */
+  .terminal { min-height: 220px; }
+
+  /* 指标卡 2 列 */
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* 预测图稍高 */
+  .pred-chart { height: 180px; }
+
+  /* 面板 header 允许换行 */
+  .panel-header { flex-wrap: wrap; gap: 4px; }
+  .map-header-controls { gap: 4px; }
+
+  /* 按钮更大触控区域 */
+  .btn-toggle { padding: 7px 12px; }
+  .btn-train  { padding: 13px; font-size: 13px; }
+
+  /* 图例栏 */
+  .legend-bar { padding: 0 12px; gap: 6px; }
+  .legend-gradient { max-width: 160px; }
+}
