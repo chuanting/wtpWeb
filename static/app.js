@@ -12,6 +12,7 @@ const state = {
   timeIdx:    0,
   playing:    false,
   speed:      1,
+  mapMode:    'flat',   // 'flat' | '3d'
   streetId:   null,
   streetName: null,
   mapData:    null,
@@ -186,6 +187,8 @@ function buildColoredGeoJSON(timeIdx) {
           ...f.properties,
           fillColor: valueToColor(val, max95),
           value:     val,
+          // 3D 高度：最高流量对应 6000m，视觉冲击力强
+          extHeight: val > 0 ? Math.round((val / max95) * 6000) : 0,
         },
       };
     }),
@@ -208,8 +211,8 @@ function initMap() {
     zoom:             9.8,
     antialias:        true,
     attributionControl: false,
-    pitchWithRotate:  false,
-    dragRotate:       false,
+    pitchWithRotate:  true,
+    dragRotate:       false,   // 默认禁止旋转，3D 模式时开启
   });
 
   mlMap.addControl(
@@ -226,10 +229,12 @@ function initMap() {
     }
   });
 
-  mlMap.on('load', () => {
+  // style.load 在初始加载和每次 setStyle 后都会触发
+  // 确保 source/layer 始终存在
+  mlMap.on('style.load', () => {
     mapLoaded = true;
     addMapLayers();
-    renderMapFrame(0);
+    renderMapFrame(state.timeIdx);
   });
 
   window.addEventListener('resize', () => mlMap && mlMap.resize());
@@ -286,9 +291,9 @@ function addMapLayers() {
       ],
       'line-width': [
         'case',
-        ['boolean', ['feature-state', 'selected'], false], 2.5,
-        ['boolean', ['feature-state', 'hover'],    false], 1.0,
-        0.35,
+        ['boolean', ['feature-state', 'selected'], false], 3.5,
+        ['boolean', ['feature-state', 'hover'],    false], 2.0,
+        1.0,
       ],
       'line-opacity': [
         'case',
@@ -299,7 +304,58 @@ function addMapLayers() {
     },
   });
 
-  // ── Hover ──
+  // ④ 3D 柱状图层（默认隐藏）
+  mlMap.addLayer({
+    id:     'streets-3d',
+    type:   'fill-extrusion',
+    source: 'streets',
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-extrusion-color':   ['get', 'fillColor'],
+      'fill-extrusion-height':  ['get', 'extHeight'],
+      'fill-extrusion-base':    0,
+      'fill-extrusion-opacity': 0.88,
+    },
+  });
+
+  // style.load 重触发后，恢复当前模式的可见性
+  if (state.mapMode === '3d') {
+    ['streets-fill', 'streets-glow', 'streets-outline'].forEach(id =>
+      mlMap.setLayoutProperty(id, 'visibility', 'none')
+    );
+    mlMap.setLayoutProperty('streets-3d', 'visibility', 'visible');
+  }
+
+  // 3D 模式下的 hover / click 事件
+  mlMap.on('mousemove', 'streets-3d', e => {
+    mlMap.getCanvas().style.cursor = 'pointer';
+    const f = e.features?.[0];
+    if (!f) return;
+    if (hoveredFeatId !== null && hoveredFeatId !== f.id)
+      mlMap.setFeatureState({ source: 'streets', id: hoveredFeatId }, { hover: false });
+    hoveredFeatId = f.id;
+    mlMap.setFeatureState({ source: 'streets', id: f.id }, { hover: true });
+    showMapTooltip(e.originalEvent, f.properties);
+  });
+  mlMap.on('mouseleave', 'streets-3d', () => {
+    mlMap.getCanvas().style.cursor = '';
+    if (hoveredFeatId !== null) {
+      mlMap.setFeatureState({ source: 'streets', id: hoveredFeatId }, { hover: false });
+      hoveredFeatId = null;
+    }
+    hideMapTooltip();
+  });
+  mlMap.on('click', 'streets-3d', e => {
+    const f = e.features?.[0];
+    if (!f) return;
+    if (selectedFeatId !== null)
+      mlMap.setFeatureState({ source: 'streets', id: selectedFeatId }, { selected: false });
+    selectedFeatId = f.id;
+    mlMap.setFeatureState({ source: 'streets', id: f.id }, { selected: true });
+    selectStreet(f.properties.id, f.properties.name);
+  });
+
+  // ── Hover（热力图层）──
   mlMap.on('mousemove', 'streets-fill', e => {
     mlMap.getCanvas().style.cursor = 'pointer';
     const f = e.features?.[0];
@@ -334,6 +390,70 @@ function addMapLayers() {
   });
 }
 
+/* ══════════════════════════════════════════════
+   3D 自动旋转
+══════════════════════════════════════════════ */
+let _rotRAF     = null;
+let _rotActive  = false;
+const ROT_SPEED = 0.05;   // 度/帧，约 3°/s，75秒转一圈
+
+function startRotation() {
+  if (_rotRAF) return;
+  _rotActive = true;
+  const step = () => {
+    if (!_rotActive || !mlMap) return;
+    if (!mlMap.isZooming()) {
+      mlMap.setBearing((mlMap.getBearing() + ROT_SPEED) % 360);
+    }
+    _rotRAF = requestAnimationFrame(step);
+  };
+  _rotRAF = requestAnimationFrame(step);
+  $('btnRotate')?.classList.add('active');
+}
+
+function stopRotation() {
+  _rotActive = false;
+  if (_rotRAF) { cancelAnimationFrame(_rotRAF); _rotRAF = null; }
+  $('btnRotate')?.classList.remove('active');
+}
+
+function toggleRotation() {
+  _rotActive ? stopRotation() : startRotation();
+}
+
+function toggleMapMode(mode) {
+  if (!mapLoaded) return;
+  state.mapMode = mode;
+  const is3d = mode === '3d';
+
+  const setVis = (id, vis) => {
+    if (mlMap.getLayer(id)) mlMap.setLayoutProperty(id, 'visibility', vis);
+  };
+
+  ['streets-fill', 'streets-glow', 'streets-outline'].forEach(id =>
+    setVis(id, is3d ? 'none' : 'visible')
+  );
+  setVis('streets-3d', is3d ? 'visible' : 'none');
+
+  if (is3d) {
+    mlMap.dragRotate.enable();
+    mlMap.touchZoomRotate.enableRotation();
+    mlMap.easeTo({ pitch: 55, bearing: -20, duration: 900 });
+    $('btnRotate').style.display = '';
+    // 进入 3D 后自动开始旋转
+    setTimeout(startRotation, 950);
+  } else {
+    stopRotation();
+    mlMap.dragRotate.disable();
+    mlMap.touchZoomRotate.disableRotation();
+    mlMap.easeTo({ pitch: 0, bearing: 0, duration: 700 });
+    $('btnRotate').style.display = 'none';
+  }
+
+  // 切换后强制刷新当前帧数据
+  renderMapFrame(state.timeIdx);
+}
+
 function reapplyFeatureStates() {
   if (!mapLoaded) return;
   if (hoveredFeatId  !== null)
@@ -346,7 +466,9 @@ function renderMapFrame(timeIdx) {
   state.timeIdx = timeIdx;
 
   if (mapLoaded && mlMap) {
-    mlMap.getSource('streets').setData(buildColoredGeoJSON(timeIdx));
+    const source = mlMap.getSource('streets');
+    if (!source) return;   // 样式切换瞬间 source 可能尚未就绪
+    source.setData(buildColoredGeoJSON(timeIdx));
     requestAnimationFrame(reapplyFeatureStates);
     $('legendMax').textContent = `${state._currentMax.toFixed(0)}`;
   }
@@ -404,6 +526,28 @@ function bindControls() {
       renderMapFrame(state.timeIdx);
       if (state.streetId) loadStreetSeries(state.streetId, state.streetName);
     });
+  });
+
+  // 地图模式切换
+  $('mapModeGroup').querySelectorAll('.btn-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $('mapModeGroup').querySelectorAll('.btn-toggle').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      toggleMapMode(btn.dataset.mode);
+    });
+  });
+
+  // 旋转开关
+  $('btnRotate').addEventListener('click', toggleRotation);
+
+  // 仅在用户拖拽（改变方位角）时暂停旋转，缩放不受影响
+  let _rotWasActive = false;
+  mlMap.on('dragstart', () => {
+    _rotWasActive = _rotActive;
+    if (_rotActive) stopRotation();
+  });
+  mlMap.on('dragend', () => {
+    if (_rotWasActive) startRotation();
   });
 
   $('timeSlider').addEventListener('input', e => {

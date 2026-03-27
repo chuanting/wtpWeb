@@ -41,7 +41,16 @@
   <!-- 左：地图 -->
   <section class="panel map-panel" id="mapPanel">
     <div class="panel-header">
-      <span class="panel-title">流量热力地图</span>
+      <span class="panel-title">流量地图</span>
+      <div class="map-header-controls">
+        <div class="btn-group" id="mapModeGroup">
+          <button class="btn-toggle active" data-mode="flat">◼ 热力图</button>
+          <button class="btn-toggle" data-mode="3d">▲ 3D</button>
+        </div>
+        <button class="btn-rotate" id="btnRotate" style="display:none;" title="自动旋转">
+          ↻ 旋转
+        </button>
+      </div>
       <span class="panel-subtitle" id="mapSubtitle">5G 下行 · 实时</span>
     </div>
     <div id="mapChart" class="chart-box"></div>
