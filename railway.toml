@@ -1,5 +1,5 @@
 [build]
-buildCommand = "pip install -r requirements.txt && python preprocess.py"
+buildCommand = "apt-get install -y libgomp1 && pip install -r requirements.txt && python preprocess.py"
 
 [deploy]
 startCommand = "gunicorn -w 1 -k gthread --threads 8 --timeout 300 --bind 0.0.0.0:$PORT server:app"
