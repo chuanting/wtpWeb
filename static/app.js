@@ -52,7 +52,12 @@ function applyTheme(name) {
   const sel = document.getElementById('themeSelect');
   if (sel) sel.value = name;
 
-  // 更新时序图系列颜色
+  // 1. 更新地图色阶
+  COLOR_STOPS = THEME_MAP_STOPS[name] || THEME_MAP_STOPS.ocean;
+  if (mapLoaded) renderMapFrame(state.timeIdx);
+  updateLegendGradient();
+
+  // 2. 更新时序图系列颜色
   const colors = (THEME_COLORS[name] || THEME_COLORS.ocean).series;
   if (_animData?.rawSeries?.length) {
     _animData.rawSeries.forEach((s, i) => { if (colors[i]) s.color = colors[i]; });
@@ -79,14 +84,63 @@ function applyTheme(name) {
   }
 }
 
-/* ── 颜色阶（深海蓝 → 钴蓝 → 天蓝 → 冰蓝 → 白）──── */
-const COLOR_STOPS = [
-  [0,    [15,  31,  61]],   // 深海蓝（近背景色，"无流量"自然融入）
-  [0.2,  [30,  64, 175]],   // 钴蓝
-  [0.5,  [14, 165, 233]],   // 天蓝
-  [0.78, [186, 230, 253]],  // 冰蓝
-  [1.0,  [255, 255, 255]],  // 纯白（峰值）
-];
+function updateLegendGradient() {
+  const el = document.getElementById('legendGradient');
+  if (!el) return;
+  const grad = COLOR_STOPS
+    .map(([t, [r, g, b]]) => `rgb(${r},${g},${b}) ${(t * 100).toFixed(0)}%`)
+    .join(', ');
+  el.style.background = `linear-gradient(90deg, ${grad})`;
+}
+
+/* ── 各主题地图色阶 ──────────────────────────────── */
+const THEME_MAP_STOPS = {
+  ocean:    [
+    [0,    [15,  31,  61]],   // 深海蓝
+    [0.2,  [30,  64, 175]],   // 钴蓝
+    [0.5,  [14, 165, 233]],   // 天蓝
+    [0.78, [186, 230, 253]],  // 冰蓝
+    [1.0,  [255, 255, 255]],  // 纯白
+  ],
+  business: [
+    [0,    [20,  18,  12]],   // 炭黑
+    [0.2,  [90,  60,   8]],   // 深金棕
+    [0.5,  [212, 168,  50]],  // 暗金
+    [0.78, [254, 218, 106]],  // 亮金
+    [1.0,  [255, 248, 220]],  // 奶白
+  ],
+  cyber:    [
+    [0,    [2,    8,  20]],   // 近黑
+    [0.2,  [0,   60,  90]],   // 深青
+    [0.5,  [0,  180, 220]],   // 电青
+    [0.78, [103, 232, 249]],  // 亮青
+    [1.0,  [220, 255, 255]],  // 冰白
+  ],
+  aurora:   [
+    [0,    [7,    3,  26]],   // 深空紫
+    [0.2,  [50,  10, 120]],   // 暗紫
+    [0.5,  [147,  51, 234]],  // 紫罗兰
+    [0.78, [208, 143, 247]],  // 薰衣草
+    [1.0,  [255, 240, 255]],  // 淡紫白
+  ],
+  mono:     [
+    [0,    [12,  12,  12]],   // 黑
+    [0.2,  [50,  50,  50]],   // 深灰
+    [0.5,  [120, 120, 120]],  // 中灰
+    [0.78, [200, 200, 200]],  // 浅灰
+    [1.0,  [255, 255, 255]],  // 白
+  ],
+  emerald:  [
+    [0,    [2,   15,   7]],   // 深林
+    [0.2,  [6,   70,  40]],   // 暗绿
+    [0.5,  [16,  185, 129]],  // 翡翠
+    [0.78, [167, 243, 208]],  // 薄荷
+    [1.0,  [240, 255, 248]],  // 白绿
+  ],
+};
+
+/* ── 当前色阶（可被主题替换）─────────────────────── */
+let COLOR_STOPS = THEME_MAP_STOPS.ocean;
 
 function valueToRgb(val, max) {
   const t = Math.min(val / (max || 1), 1);
