@@ -328,11 +328,6 @@ function initMap() {
     new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left'
   );
 
-  // 单位 logo 水印（叠加在地图正中心）
-  const _logoWrap = document.createElement('div');
-  _logoWrap.className = 'map-logo-overlay';
-  _logoWrap.innerHTML = '<img src="/static/bottombg.png" alt="单位logo">';
-  document.getElementById('mapChart').appendChild(_logoWrap);
 
   // 底图加载失败时回落到纯暗色
   mlMap.on('error', e => {

@@ -866,23 +866,13 @@ html, body {
   font-size: 9px !important;
 }
 
-/* ── 地图 Logo 水印 ── */
-.map-logo-overlay {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 10;
-  opacity: 0.13;
-  transition: opacity 0.3s;
-  user-select: none;
-}
-.map-logo-overlay img {
-  width: 220px;
-  height: auto;
+/* ── 导航栏 Logo ── */
+.navbar-logo {
+  height: 30px;
+  width: auto;
   display: block;
-  filter: drop-shadow(0 0 12px rgba(255,255,255,0.15));
+  opacity: 0.92;
+  flex-shrink: 0;
 }
 
 /* ── 地图 Tooltip ── */
@@ -1018,6 +1008,7 @@ html, body {
   .navbar-left { flex: 1 1 auto; }
   .navbar-title { font-size: 12px; }
   .logo-icon { font-size: 16px; }
+  .navbar-logo { height: 22px; }
   .navbar-controls {
     width: 100%;
     gap: 6px;
