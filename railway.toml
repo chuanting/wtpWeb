@@ -1,0 +1,6 @@
+[build]
+buildCommand = "pip install -r requirements.txt && python preprocess.py"
+
+[deploy]
+startCommand = "python server.py"
+restartPolicyType = "on_failure"

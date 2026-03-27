@@ -280,10 +280,11 @@ def _train_worker(street_id: str, net: str, q: queue.Queue):
 
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8765))
     print("\n" + "═" * 50)
     print("  济南市 4G/5G 流量可视化系统")
     print("═" * 50)
-    print("  访问: http://localhost:8765")
+    print(f"  访问: http://localhost:{port}")
     print("  请确保已运行 python preprocess.py")
     print("═" * 50 + "\n")
-    app.run(host='0.0.0.0', port=8765, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
