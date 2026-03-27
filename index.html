@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>济南市 4G/5G 基站流量可视化</title>
   <link rel="stylesheet" href="/static/style.css" />
-  <!-- ECharts 5（本地，避免CDN问题）-->
+  <link rel="stylesheet" href="/static/lib/maplibre-gl.css" />
+  <!-- MapLibre GL JS（地图）-->
+  <script src="/static/lib/maplibre-gl.js"></script>
+  <!-- ECharts 5（时序图 + 训练结果图）-->
   <script src="/static/lib/echarts.min.js"></script>
 </head>
 <body>
@@ -36,7 +39,7 @@
 <main class="main-layout">
 
   <!-- 左：地图 -->
-  <section class="panel map-panel">
+  <section class="panel map-panel" id="mapPanel">
     <div class="panel-header">
       <span class="panel-title">流量热力地图</span>
       <span class="panel-subtitle" id="mapSubtitle">5G 下行 · 实时</span>
@@ -58,8 +61,16 @@
     </div>
   </section>
 
+  <!-- 分割条 -->
+  <div class="resizer" id="resizer">
+    <div class="resizer-line"></div>
+    <div class="resizer-handle">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
   <!-- 右：侧边栏 -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
 
     <!-- 右上：时序图 -->
     <section class="panel series-panel" id="seriesPanel">
@@ -147,6 +158,9 @@
 
   </aside>
 </main>
+
+<!-- 地图 Tooltip -->
+<div id="mapTooltip" class="map-tooltip"></div>
 
 <!-- 颜色图例 -->
 <div class="legend-bar">
