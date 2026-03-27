@@ -36,6 +36,49 @@ let predChart     = null;
 let _animTimer    = null;   // 时序动画定时器
 let _animData     = null;   // 时序原始数据 { times, rawSeries[] }
 
+/* ── 主题配色表 ──────────────────────────────────── */
+const THEME_COLORS = {
+  ocean:    { series: ['#60a5fa', '#a78bfa', '#34d399', '#fbbf24'] },
+  business: { series: ['#feda6a', '#e8a030', '#5cbdb9', '#f47560'] },
+  cyber:    { series: ['#67e8f9', '#00ff9f', '#ff79c6', '#ffff00'] },
+  aurora:   { series: ['#d08ff7', '#51d0de', '#f472b6', '#34d399'] },
+  mono:     { series: ['#e0e0e0', '#a8a8a8', '#c8c8c8', '#787878'] },
+  emerald:  { series: ['#34d399', '#60a5fa', '#fbbf24', '#f472b6'] },
+};
+
+function applyTheme(name) {
+  document.documentElement.setAttribute('data-theme', name);
+  localStorage.setItem('theme', name);
+  const sel = document.getElementById('themeSelect');
+  if (sel) sel.value = name;
+
+  // 更新时序图系列颜色
+  const colors = (THEME_COLORS[name] || THEME_COLORS.ocean).series;
+  if (_animData?.rawSeries?.length) {
+    _animData.rawSeries.forEach((s, i) => { if (colors[i]) s.color = colors[i]; });
+    if (seriesChart) {
+      stopSeriesAnimation();
+      seriesChart.setOption({
+        series: _animData.rawSeries.map(s => ({
+          lineStyle: { color: s.color },
+          itemStyle: { color: s.color },
+          areaStyle: {
+            color: {
+              type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: hexToRgba(s.color, 0.25) },
+                { offset: 1, color: 'rgba(0,0,0,0)' },
+              ],
+            },
+            opacity: 0.4,
+          },
+        })),
+      });
+      runSeriesAnimation();
+    }
+  }
+}
+
 /* ── 颜色阶（深海蓝 → 钴蓝 → 天蓝 → 冰蓝 → 白）──── */
 const COLOR_STOPS = [
   [0,    [15,  31,  61]],   // 深海蓝（近背景色，"无流量"自然融入）
@@ -104,6 +147,12 @@ async function init() {
     bindControls();
     initResizer();
     initMobileTabs();
+
+    // 恢复已保存的主题
+    const savedTheme = localStorage.getItem('theme') || 'ocean';
+    applyTheme(savedTheme);
+    $('themeSelect')?.addEventListener('change', e => applyTheme(e.target.value));
+
     showLoading(false);
   } catch (e) {
     console.error('初始化失败:', e);

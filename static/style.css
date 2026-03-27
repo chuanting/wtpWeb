@@ -5,7 +5,7 @@
 ══════════════════════════════════════════════ */
 
 /* ── CSS 变量 ── */
-:root {
+:root, [data-theme="ocean"] {
   /* 背景层次 */
   --bg-base:     #04091a;
   --bg-panel:    #070f24;
@@ -45,6 +45,150 @@
 
   --radius: 6px;
   --radius-lg: 10px;
+
+  /* 背景渐变色（r,g,b 格式供 rgba() 使用）*/
+  --grad1: 59,130,246;
+  --grad2: 29,78,216;
+}
+
+/* ── 商务金 ── */
+[data-theme="business"] {
+  --bg-base:     #0d0e11;
+  --bg-panel:    #131518;
+  --bg-panel2:   #1c1f25;
+  --bg-header:   #0a0b0e;
+  --border:      #282c36;
+  --border-mid:  #363d4d;
+  --border-glow: #b8862a;
+  --blue:        #c9a128;
+  --blue-bright: #feda6a;
+  --blue-dim:    #8a6a18;
+  --blue-faint:  #2a2210;
+  --ice:         #f5e6b8;
+  --green:       #34d399;
+  --green-dim:   #059669;
+  --green-dark:  #022c22;
+  --amber:       #fbbf24;
+  --red:         #f87171;
+  --red-dim:     #991b1b;
+  --purple:      #feda6a;
+  --text-primary:   #e8d8a8;
+  --text-secondary: #8a7a58;
+  --text-dim:       #3a3020;
+  --grad1: 212,168,50;
+  --grad2: 154,117,32;
+}
+
+/* ── 赛博青 ── */
+[data-theme="cyber"] {
+  --bg-base:     #020810;
+  --bg-panel:    #04101a;
+  --bg-panel2:   #071825;
+  --bg-header:   #020710;
+  --border:      #0a2a3a;
+  --border-mid:  #104050;
+  --border-glow: #00d4ff;
+  --blue:        #00b8d9;
+  --blue-bright: #67e8f9;
+  --blue-dim:    #008099;
+  --blue-faint:  #003545;
+  --ice:         #ccfffe;
+  --green:       #00ff9f;
+  --green-dim:   #00b870;
+  --green-dark:  #002a1a;
+  --amber:       #ffff00;
+  --red:         #ff4dc4;
+  --red-dim:     #990077;
+  --purple:      #ff79c6;
+  --text-primary:   #d0f8ff;
+  --text-secondary: #3a9ab0;
+  --text-dim:       #0a3a48;
+  --grad1: 0,212,255;
+  --grad2: 0,128,153;
+}
+
+/* ── 极光紫 ── */
+[data-theme="aurora"] {
+  --bg-base:     #07031a;
+  --bg-panel:    #0e0828;
+  --bg-panel2:   #160d38;
+  --bg-header:   #050215;
+  --border:      #260a4a;
+  --border-mid:  #3d1570;
+  --border-glow: #a855f7;
+  --blue:        #9333ea;
+  --blue-bright: #d08ff7;
+  --blue-dim:    #7e22ce;
+  --blue-faint:  #320a60;
+  --ice:         #f0d4ff;
+  --green:       #34d399;
+  --green-dim:   #059669;
+  --green-dark:  #022c22;
+  --amber:       #f472b6;
+  --red:         #f87171;
+  --red-dim:     #991b1b;
+  --purple:      #51d0de;
+  --text-primary:   #ecdeff;
+  --text-secondary: #8050a8;
+  --text-dim:       #2a0850;
+  --grad1: 168,85,247;
+  --grad2: 126,34,206;
+}
+
+/* ── 简约黑白 ── */
+[data-theme="mono"] {
+  --bg-base:     #080808;
+  --bg-panel:    #111111;
+  --bg-panel2:   #1a1a1a;
+  --bg-header:   #060606;
+  --border:      #242424;
+  --border-mid:  #383838;
+  --border-glow: #909090;
+  --blue:        #b0b0b0;
+  --blue-bright: #e8e8e8;
+  --blue-dim:    #686868;
+  --blue-faint:  #2a2a2a;
+  --ice:         #f4f4f4;
+  --green:       #c0c0c0;
+  --green-dim:   #888888;
+  --green-dark:  #1c1c1c;
+  --amber:       #d0d0d0;
+  --red:         #f0f0f0;
+  --red-dim:     #606060;
+  --purple:      #c8c8c8;
+  --text-primary:   #e8e8e8;
+  --text-secondary: #888888;
+  --text-dim:       #404040;
+  --grad1: 200,200,200;
+  --grad2: 120,120,120;
+}
+
+/* ── 翡翠绿 ── */
+[data-theme="emerald"] {
+  --bg-base:     #020f07;
+  --bg-panel:    #051810;
+  --bg-panel2:   #0a2318;
+  --bg-header:   #020c06;
+  --border:      #0e3020;
+  --border-mid:  #184830;
+  --border-glow: #10b981;
+  --blue:        #0da86e;
+  --blue-bright: #34d399;
+  --blue-dim:    #067a4e;
+  --blue-faint:  #042a1c;
+  --ice:         #d1fae5;
+  --green:       #34d399;
+  --green-dim:   #059669;
+  --green-dark:  #022c22;
+  --amber:       #fbbf24;
+  --red:         #f87171;
+  --red-dim:     #991b1b;
+  --purple:      #60a5fa;
+  --text-primary:   #c8f5e0;
+  --text-secondary: #4a8a6a;
+  --text-dim:       #0e3020;
+  --grad1: 16,185,129;
+  --grad2: 6,122,78;
 }
 
 /* ── 重置 ── */
@@ -56,9 +200,9 @@ html, body {
   color: var(--text-primary);
   font-family: var(--font-ui);
   font-size: 13px;
-  /* 极细噪点纹理，增加高级感 */
-  background-image: radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.04) 0%, transparent 60%),
-                    radial-gradient(ellipse at 80% 20%, rgba(29,78,216,0.05) 0%, transparent 50%);
+  background-image: radial-gradient(ellipse at 20% 50%, rgba(var(--grad1),0.04) 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 20%, rgba(var(--grad2),0.05) 0%, transparent 50%);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 /* ── 顶部导航栏 ── */
@@ -792,6 +936,45 @@ html, body {
   50%  { width: 70%; margin-left: 0; }
   100% { width: 0%;  margin-left: 100%; }
 }
+
+/* ── 主题选择器 ── */
+.theme-select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 4px 26px 4px 10px;
+  background-color: var(--bg-panel2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a9cc0'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 8px;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  min-width: 96px;
+  transition: border-color 0.18s, color 0.18s;
+}
+.theme-select:hover {
+  border-color: var(--blue-faint);
+  color: var(--text-primary);
+}
+.theme-select option {
+  background: #1a1f30;
+  color: #dde9ff;
+}
+
+/* ── 各主题 MapLibre 图标色相调整 ── */
+[data-theme="business"] .maplibregl-ctrl-icon { filter: invert(0.65) sepia(0.5) hue-rotate(35deg); }
+[data-theme="cyber"]    .maplibregl-ctrl-icon { filter: invert(0.65) sepia(0.3) hue-rotate(175deg) saturate(1.8); }
+[data-theme="aurora"]   .maplibregl-ctrl-icon { filter: invert(0.65) sepia(0.3) hue-rotate(265deg); }
+[data-theme="mono"]     .maplibregl-ctrl-icon { filter: invert(0.7) saturate(0); }
+[data-theme="emerald"]  .maplibregl-ctrl-icon { filter: invert(0.65) sepia(0.4) hue-rotate(115deg); }
+
+/* ── 各主题过渡动画 ── */
+.panel, .navbar, .sidebar, .legend-bar { transition: background-color 0.3s, border-color 0.3s; }
 
 /* ══════════════════════════════════════════════
    移动端适配（≤ 767px）
