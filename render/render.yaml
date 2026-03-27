@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: jinan-traffic-viz
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python preprocess.py
+    startCommand: gunicorn -w 1 -k gthread --threads 8 --timeout 300 -b 0.0.0.0:$PORT server:app

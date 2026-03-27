@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>济南市 4G/5G 基站流量可视化</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/lib/maplibre-gl.css" />
+  <!-- MapLibre GL JS（地图）-->
+  <script src="/static/lib/maplibre-gl.js"></script>
+  <!-- ECharts 5（时序图 + 训练结果图）-->
+  <script src="/static/lib/echarts.min.js"></script>
+</head>
+<body>
+
+<!-- ── 顶部导航栏 ── -->
+<header class="navbar">
+  <div class="navbar-left">
+    <span class="logo-icon">◈</span>
+    <h1 class="navbar-title">济南市 4G / 5G 基站流量可视化平台</h1>
+  </div>
+  <div class="navbar-controls">
+    <!-- 网络类型 -->
+    <div class="btn-group" id="netGroup">
+      <button class="btn-toggle active" data-value="5g">5G</button>
+      <button class="btn-toggle" data-value="4g">4G</button>
+    </div>
+    <!-- 流量方向 -->
+    <div class="btn-group" id="dirGroup">
+      <button class="btn-toggle active" data-value="down">↓ 下行</button>
+      <button class="btn-toggle" data-value="up">↑ 上行</button>
+    </div>
+    <!-- 当前时间显示 -->
+    <div class="time-badge" id="currentTimeBadge">——</div>
+  </div>
+</header>
+
+<!-- ── 主体区域 ── -->
+<main class="main-layout">
+
+  <!-- 左：地图 -->
+  <section class="panel map-panel" id="mapPanel">
+    <div class="panel-header">
+      <span class="panel-title">流量地图</span>
+      <div class="map-header-controls">
+        <div class="btn-group" id="mapModeGroup">
+          <button class="btn-toggle active" data-mode="flat">◼ 热力图</button>
+          <button class="btn-toggle" data-mode="3d">▲ 3D</button>
+        </div>
+        <button class="btn-rotate" id="btnRotate" style="display:none;" title="自动旋转">
+          ↻ 旋转
+        </button>
+      </div>
+      <span class="panel-subtitle" id="mapSubtitle">5G 下行 · 实时</span>
+    </div>
+    <div id="mapChart" class="chart-box"></div>
+
+    <!-- 时间轴 -->
+    <div class="timeline-bar">
+      <button class="tl-btn" id="btnPlay" title="播放">▶</button>
+      <div class="tl-slider-wrap">
+        <input type="range" id="timeSlider" min="0" value="0" class="tl-slider" />
+        <div class="tl-progress" id="tlProgress"></div>
+      </div>
+      <div class="speed-group">
+        <button class="speed-btn active" data-speed="1">×1</button>
+        <button class="speed-btn" data-speed="4">×4</button>
+        <button class="speed-btn" data-speed="12">×12</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 分割条 -->
+  <div class="resizer" id="resizer">
+    <div class="resizer-line"></div>
+    <div class="resizer-handle">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- 右：侧边栏 -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- 右上：时序图 -->
+    <section class="panel series-panel" id="seriesPanel">
+      <div class="panel-header">
+        <span class="panel-title" id="seriesTitle">点击地图街道查看时序</span>
+        <div class="series-legend" id="seriesLegend"></div>
+      </div>
+      <div class="empty-hint" id="seriesHint">
+        <div class="empty-icon">🗺️</div>
+        <p>在左侧地图点击任意街道<br/>查看该街道的 4G/5G 流量时序</p>
+      </div>
+      <div id="seriesChart" class="chart-box" style="display:none;"></div>
+    </section>
+
+    <!-- 右下：训练面板 -->
+    <section class="panel train-panel" id="trainPanel">
+      <div class="panel-header">
+        <span class="panel-title">模型训练</span>
+        <span class="train-status-badge" id="trainBadge">待机</span>
+      </div>
+
+      <!-- 未选街道提示 -->
+      <div class="empty-hint" id="trainHint">
+        <div class="empty-icon">🤖</div>
+        <p>选择街道后，点击按钮<br/>训练该街道的流量预测模型</p>
+      </div>
+
+      <!-- 训练就绪状态 -->
+      <div id="trainReady" style="display:none;">
+        <div class="train-info" id="trainInfoBox"></div>
+        <button class="btn-train" id="btnTrain">
+          <span class="btn-train-icon">⚡</span>
+          <span>开始训练</span>
+        </button>
+      </div>
+
+      <!-- 训练中终端 -->
+      <div class="terminal" id="terminal" style="display:none;">
+        <!-- 粒子画布 -->
+        <canvas id="particleCanvas" class="particle-bg"></canvas>
+
+        <!-- 终端头部 -->
+        <div class="term-header">
+          <div class="term-dots">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+          </div>
+          <span class="term-title" id="termTitle">HGBT TRAINER</span>
+          <span class="term-elapsed" id="termElapsed">00:00</span>
+        </div>
+
+        <!-- 进度区 -->
+        <div class="term-progress-wrap" id="termProgressWrap">
+          <div class="term-progress-label">
+            <span id="termPhaseLabel">初始化...</span>
+            <span id="termPct">0%</span>
+          </div>
+          <div class="term-progress-track">
+            <div class="term-progress-bar" id="termProgressBar"></div>
+            <div class="term-progress-shimmer"></div>
+          </div>
+          <div class="term-progress-meta">
+            <span id="termIter">Iter: 0 / 300</span>
+            <span id="termRmse">RMSE: —</span>
+            <span id="termEta">ETA: —</span>
+          </div>
+        </div>
+
+        <!-- 日志区 -->
+        <div class="term-log" id="termLog"></div>
+
+        <!-- 光标 -->
+        <div class="term-cursor-line">
+          <span class="term-prompt">▶</span>
+          <span class="term-cursor" id="termCursor">█</span>
+        </div>
+      </div>
+
+      <!-- 训练结果 -->
+      <div id="trainResult" style="display:none;">
+        <div class="metrics-grid" id="metricsGrid"></div>
+        <div id="predChart" class="chart-box pred-chart"></div>
+        <button class="btn-retrain" id="btnRetrain">重新训练</button>
+      </div>
+    </section>
+
+  </aside>
+</main>
+
+<!-- 地图 Tooltip -->
+<div id="mapTooltip" class="map-tooltip"></div>
+
+<!-- 颜色图例 -->
+<div class="legend-bar">
+  <span class="legend-label">流量（MB）</span>
+  <div class="legend-gradient" id="legendGradient"></div>
+  <span class="legend-min" id="legendMin">0</span>
+  <span class="legend-max" id="legendMax">—</span>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
