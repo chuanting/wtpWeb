@@ -33,6 +33,8 @@ let hoveredFeatId = null;   // 当前 hover 的 feature id
 let selectedFeatId = null;  // 当前选中的 feature id
 let seriesChart   = null;
 let predChart     = null;
+let _animTimer    = null;   // 时序动画定时器
+let _animData     = null;   // 时序原始数据 { times, rawSeries[] }
 
 /* ── 颜色阶（深海蓝 → 钴蓝 → 天蓝 → 冰蓝 → 白）──── */
 const COLOR_STOPS = [
@@ -604,7 +606,12 @@ function selectStreet(id, name) {
   loadStreetSeries(id, name);
 }
 
+function stopSeriesAnimation() {
+  if (_animTimer) { clearInterval(_animTimer); _animTimer = null; }
+}
+
 async function loadStreetSeries(id, name) {
+  stopSeriesAnimation();
   $('seriesHint').style.display  = 'none';
   $('seriesChart').style.display = 'block';
   $('seriesTitle').textContent   = `${name} · 流量时序`;
@@ -630,34 +637,22 @@ async function loadStreetSeries(id, name) {
     const colors = ['#60a5fa', '#a78bfa', '#34d399', '#fbbf24'];
     const results = await Promise.allSettled(urls.map(u => fetchJSON(u)));
 
-    const series = [];
     let times = [];
-
+    const rawSeries = [];
     results.forEach((res, i) => {
       if (res.status !== 'fulfilled' || res.value.error) return;
       const { times: t, values: v } = res.value;
       if (!times.length) times = t;
-      series.push({
-        name: labels[i], type: 'line', data: v, smooth: true,
-        lineStyle: { color: colors[i], width: 1.5 },
-        itemStyle: { color: colors[i] },
-        symbol: 'none',
-        areaStyle: {
-          color: {
-            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: hexToRgba(colors[i], 0.25) },
-              { offset: 1, color: 'rgba(0,0,0,0)' },
-            ],
-          },
-          opacity: 0.4,
-        },
-      });
+      rawSeries.push({ name: labels[i], color: colors[i], values: v });
     });
 
+    _animData = { times, rawSeries };
     seriesChart.hideLoading();
+
+    // 一次性静态配置
     seriesChart.setOption({
       backgroundColor: 'transparent',
+      animation: false,
       tooltip: {
         trigger: 'axis', className: 'echarts-tooltip',
         axisPointer: { type: 'cross', lineStyle: { color: '#1e3a5f' } },
@@ -673,16 +668,15 @@ async function loadStreetSeries(id, name) {
         },
       },
       legend: {
-        data: series.map(s => s.name), top: 0, right: 4,
+        data: rawSeries.map(s => s.name), top: 0, right: 4,
         textStyle: { color: '#94a3b8', fontSize: 10 },
         icon: 'circle', itemWidth: 8, itemHeight: 8,
       },
-      grid: { top: 28, bottom: 56, left: 44, right: 12 },
+      grid: { top: 28, bottom: 28, left: 44, right: 12 },
       xAxis: {
-        type: 'category', data: times,
+        type: 'category', data: [],
         axisLabel: { color: '#4a6a8a', fontSize: 9,
-          formatter: v => v.slice(5, 16),
-          interval: Math.floor(times.length / 5) },
+          formatter: v => v.slice(5, 11), interval: 95 },
         axisLine: { lineStyle: { color: '#1e3a5f' } },
         splitLine: { show: false },
       },
@@ -694,18 +688,88 @@ async function loadStreetSeries(id, name) {
         axisLine: { show: false },
         splitLine: { lineStyle: { color: '#1e3a5f', type: 'dashed' } },
       },
-      dataZoom: [
-        { type: 'inside', start: 0, end: 100 },
-        { type: 'slider', height: 16, bottom: 6, handleSize: 10,
-          borderColor: '#1e3a5f', fillerColor: 'rgba(8,145,178,0.15)',
-          textStyle: { color: '#4a6a8a', fontSize: 9 } },
-      ],
-      series,
+      series: rawSeries.map((s, i) => ({
+        name: s.name, type: 'line', data: [], smooth: true,
+        lineStyle: { color: s.color, width: 1.5 },
+        itemStyle: { color: s.color },
+        symbol: 'none',
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: hexToRgba(s.color, 0.25) },
+              { offset: 1, color: 'rgba(0,0,0,0)' },
+            ],
+          },
+          opacity: 0.4,
+        },
+        markLine: i === 0 ? {
+          silent: true,
+          symbol: ['none', 'none'],
+          lineStyle: { color: 'rgba(96,165,250,0.5)', type: 'dashed', width: 1 },
+          label: { show: true, formatter: '今日', color: '#60a5fa',
+                   fontSize: 8, position: 'insideStartTop' },
+          data: [],
+        } : undefined,
+      })),
     }, { notMerge: true });
+
+    runSeriesAnimation();
   } catch (e) {
     seriesChart.hideLoading();
     console.error('时序加载失败:', e);
   }
+}
+
+/* ══════════════════════════════════════════════
+   七天滚动动画（6天静态 + 第7天逐点播放）
+══════════════════════════════════════════════ */
+function runSeriesAnimation() {
+  if (!_animData || !seriesChart) return;
+  stopSeriesAnimation();
+
+  const { times, rawSeries } = _animData;
+  const DAY_PTS  = 96;           // 每天 96 个 15 分钟时间步
+  const HIST_PTS = 6 * DAY_PTS;  // 前 6 天：576 个点（静态）
+  const WIN_PTS  = 7 * DAY_PTS;  // 7 天窗口：672 个点
+  const ANIM_MS  = 80;           // 每点间隔 ms（≈7.7s/天）
+
+  if (times.length < WIN_PTS) return;
+
+  let winStart = 0;
+
+  function setFrame(nLive) {
+    const t = times.slice(winStart, winStart + HIST_PTS + nLive);
+    const boundaryTime = nLive > 0 ? times[winStart + HIST_PTS] : null;
+    seriesChart.setOption({
+      xAxis: { data: t },
+      series: rawSeries.map((s, i) => {
+        const obj = { data: s.values.slice(winStart, winStart + HIST_PTS + nLive) };
+        if (i === 0) obj.markLine = { data: boundaryTime ? [{ xAxis: boundaryTime }] : [] };
+        return obj;
+      }),
+    });
+  }
+
+  function startWindow() {
+    setFrame(0);
+    let live = 0;
+    const maxLive = Math.min(DAY_PTS, times.length - winStart - HIST_PTS);
+
+    _animTimer = setInterval(() => {
+      live++;
+      setFrame(live);
+      if (live >= maxLive) {
+        clearInterval(_animTimer);
+        _animTimer = null;
+        const next = winStart + DAY_PTS;
+        winStart = (next + WIN_PTS <= times.length) ? next : 0;
+        setTimeout(startWindow, 1200); // 停顿 1.2s 后推进下一天
+      }
+    }, ANIM_MS);
+  }
+
+  startWindow();
 }
 
 /* ══════════════════════════════════════════════
