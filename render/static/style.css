@@ -235,6 +235,15 @@ html, body {
 
 .navbar-left { display: flex; align-items: center; gap: 12px; }
 
+.navbar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
 .logo-icon {
   font-size: 20px;
   color: var(--blue-bright);
@@ -901,7 +910,7 @@ html, body {
 
 /* ── 导航栏 Logo ── */
 .navbar-logo {
-  height: 30px;
+  height: 42px;
   width: auto;
   display: block;
   opacity: 0.92;
@@ -1041,7 +1050,8 @@ html, body {
   .navbar-left { flex: 1 1 auto; }
   .navbar-title { font-size: 12px; }
   .logo-icon { font-size: 16px; }
-  .navbar-logo { height: 22px; }
+  .navbar-logo { height: 28px; }
+  .navbar-center { display: none; }
   .navbar-controls {
     width: 100%;
     gap: 6px;
